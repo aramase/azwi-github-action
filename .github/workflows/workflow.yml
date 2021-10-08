@@ -1,0 +1,34 @@
+name: test_oidc
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Dump env
+        run: env
+      - name: Get the secret from keyvault
+        run: |
+          OIDC_TOKEN=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=test" -H "User-Agent: actions/oidc-client" -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
+
+          # Get the AAD token
+          TOKEN=$(curl -s --request POST "https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token" \
+            --data-urlencode 'grant_type=client_credentials' \
+            --data-urlencode client_id=${CLIENT_ID} \
+            --data-urlencode client_assertion=$OIDC_TOKEN \
+            --data-urlencode 'client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer' \
+            --data-urlencode 'scope=https://vault.azure.net/.default' | jq -r '.access_token')
+
+          curl -s --request GET "https://${KEYVAULT_NAME}.vault.azure.net/secrets/${SECRET_NAME}?api-version=2016-10-01" \
+            --header "Authorization: Bearer $TOKEN" | jq -r '.value'
+        env:
+          KEYVAULT_NAME: ${{ secrets.KEYVAULT_NAME }}
+          SECRET_NAME: ${{ secrets.SECRET_NAME }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
