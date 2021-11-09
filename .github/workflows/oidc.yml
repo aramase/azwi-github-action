@@ -10,18 +10,11 @@ jobs:
     steps:
         
       # ubuntu Az CLI installation 
-      - name: Install CLI-beta
+      - name: Install Az CLI latest version
         run: |
-           cd ../..
-           CWD="$(pwd)"
-           python3 -m venv oidc-venv
-           . oidc-venv/bin/activate
-           echo "activated environment" 
-           python3 -m pip install --upgrade pip
-           echo "started installing cli beta" 
-           pip install -q --extra-index-url https://azcliprod.blob.core.windows.net/beta/simple/ azure-cli
-           echo "installed cli beta"    
-           echo "$CWD/oidc-venv/bin" >> $GITHUB_PATH   
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          az version
+          az login -h
   
       - name: 'Az CLI login'
         uses: azure/login@v1.4.0
